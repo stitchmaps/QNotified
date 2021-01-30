@@ -40,7 +40,9 @@ public class HybridClassLoader extends ClassLoader {
         } catch (ClassNotFoundException ignored) {
         }
         if (name != null && (name.startsWith("androidx.") || name.startsWith("android.support.v4.")
-                || name.startsWith("kotlin.") || name.startsWith("kotlinx."))) {
+            || name.startsWith("kotlin.") || name.startsWith("kotlinx.")
+            || name.startsWith("com.google.android.material.") || name.startsWith("com.google.gson."))) {
+            // TODO: 21-1-30 Run full class clash check
             //Nevertheless, this will not interfere with the host application,
             //classes in host application SHOULD find with their own ClassLoader, eg Class.forName()
             //use shipped androidx and kotlin lib.

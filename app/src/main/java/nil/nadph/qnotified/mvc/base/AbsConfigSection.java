@@ -16,14 +16,29 @@
  * along with this software.  If not, see
  * <https://www.gnu.org/licenses/>.
  */
-package nil.nadph.qnotified.mvc;
+package nil.nadph.qnotified.mvc.base;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 /**
- * UI Configuration that will be used to generate function-config screen to user.
+ * Only one AbsConfigSection can be attached to a StyledUiProvider at a time.
  */
-public interface InterfaceConfiguration {
+public interface AbsConfigSection {
 
-    boolean shouldShowMasterSwitch();
+    /**
+     * Called when this config section is to be created.
+     *
+     * @param ui the ui you should use
+     * @return unused
+     */
+    boolean onAttach(@NonNull StyledUiProvider ui);
 
+    /**
+     * Called before this config section is to be destroyed.
+     *
+     * @param ui the ui you should use
+     */
+    void onDetach(@NonNull StyledUiProvider ui);
 
 }

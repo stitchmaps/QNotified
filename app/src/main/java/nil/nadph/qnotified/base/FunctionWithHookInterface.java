@@ -18,5 +18,9 @@
  */
 package nil.nadph.qnotified.base;
 
-public interface AbsConfigSection {
+/**
+ * This class is reserved for BeanShell script use only.
+ * Do not use it for other purpose.
+ */
+public interface FunctionWithHookInterface extends AbsFunctionItem, AbsHookTask {
 }
