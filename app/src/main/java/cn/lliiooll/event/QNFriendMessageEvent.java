@@ -16,34 +16,31 @@
  * along with this software.  If not, see
  * <https://www.gnu.org/licenses/>.
  */
-package nil.nadph.qnotified.script.params;
+package cn.lliiooll.event;
 
-public class FriendMessageParam {
-    /**
-     * 好友id
-     */
-    public String uin;
-    /**
-     * 消息内容
-     */
-    public String content;
+import cn.lliiooll.params.*;
+import me.singleneuron.data.*;
 
-    public FriendMessageParam setUin(String uin) {
-        this.uin = uin;
-        return this;
+public class QNFriendMessageEvent extends QNBaseEvent {
+    
+    
+    private final MsgRecordData record;
+    
+    public QNFriendMessageEvent(MsgRecordData record) {
+        super("onFriendMessage", "pFM");
+        this.record = record;
     }
-
-    public FriendMessageParam setUin(long uin) {
-        this.uin = uin + "";
-        return this;
+    
+    public static QNFriendMessageEvent create(MsgRecordData data) {
+        return new QNFriendMessageEvent(data);
     }
-
-    public FriendMessageParam setContent(String content) {
-        this.content = content;
-        return this;
-    }
-
-    public FriendMessageParam create() {
-        return this;
+    
+    @Override
+    public BaseParams doParse() {
+        return FriendMessageParam.builder()
+            .setSelfUin(record.getSelfUin())
+            .setSenderUin(record.getSenderUin())
+            .setMsg(record.getMsg())
+            .build();
     }
 }

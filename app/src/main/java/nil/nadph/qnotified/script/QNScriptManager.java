@@ -18,31 +18,18 @@
  */
 package nil.nadph.qnotified.script;
 
-import android.widget.CompoundButton;
-import android.widget.Toast;
+import android.widget.*;
 
-import java.io.File;
-import java.io.FileDescriptor;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.*;
+import java.util.*;
 
-import bsh.EvalError;
-import bsh.Interpreter;
-import nil.nadph.qnotified.config.ConfigItems;
-import nil.nadph.qnotified.config.ConfigManager;
-import nil.nadph.qnotified.util.Initiator;
-import nil.nadph.qnotified.util.Utils;
+import bsh.*;
+import cn.lliiooll.script.*;
+import cn.lliiooll.utils.*;
+import nil.nadph.qnotified.config.*;
+import nil.nadph.qnotified.util.*;
 
-import static nil.nadph.qnotified.util.Utils.getApplication;
-import static nil.nadph.qnotified.util.Utils.isNullOrEmpty;
-import static nil.nadph.qnotified.util.Utils.log;
-import static nil.nadph.qnotified.util.Utils.readByReader;
+import static nil.nadph.qnotified.util.Utils.*;
 
 public class QNScriptManager {
 
@@ -70,8 +57,9 @@ public class QNScriptManager {
         File f = new File(dir, s.getName());
         Utils.copy(s, f);
         String code = readByReader(new FileReader(f));
-        if (!isNullOrEmpty(code))
-            scripts.add(execute(code));
+        if (!isNullOrEmpty(code)) {
+            scripts.add(QNScriptFactory.parse(new FileInputStream(f)));
+        }
         return "";
     }
 
@@ -100,7 +88,7 @@ public class QNScriptManager {
         }
         String code = readByReader(new FileReader(scriptsPath + scriptName));
         if (!isNullOrEmpty(code)) {
-            scripts.add(execute(code));
+            scripts.add(QNScriptFactory.parse(new FileInputStream(new File(scriptsPath + scriptName))));
         }
         return "";
     }
@@ -125,10 +113,10 @@ public class QNScriptManager {
         if (Utils.isNullOrEmpty(file)) return false;
         // to do
         // 判断文件
-        QNScriptInfo info = QNScriptInfo.getInfo(Utils.readByReader(new FileReader(new File(file))));
+        QNScriptInfo info = QNScriptInfo.parse(QNScriptUtils.readLines(new FileInputStream(new File(file))));
         if (info == null) throw new RuntimeException("不是有效的脚本文件");
         for (QNScript q : getScripts()) {
-            if (info.label.equalsIgnoreCase(q.getLabel())) {
+            if (info.getLabel().equalsIgnoreCase(q.getInfo().getLabel())) {
                 return true;
             }
         }
@@ -136,10 +124,10 @@ public class QNScriptManager {
     }
 
     public static boolean hasScriptStr(String code) throws Exception {
-        QNScriptInfo info = QNScriptInfo.getInfo(code);
+        QNScriptInfo info = QNScriptInfo.parse(new ArrayList<>(Arrays.asList(code.split("\n"))));
         if (info == null) throw new RuntimeException("不是有效的脚本文件");
         for (QNScript q : getScripts()) {
-            if (info.label.equalsIgnoreCase(q.getLabel())) {
+            if (info.getLabel().equalsIgnoreCase(q.getInfo().getLabel())) {
                 return true;
             }
         }
@@ -164,8 +152,8 @@ public class QNScriptManager {
         for (File f : dir.listFiles()) {
             if (f.isDirectory()) continue;
             try {
-                QNScriptInfo info = QNScriptInfo.getInfo(Utils.readByReader(new FileReader(f)));
-                if (info.label.equalsIgnoreCase(script.getLabel())) {
+                QNScriptInfo info = QNScriptInfo.parse(QNScriptUtils.readLines(f));
+                if (info.getLabel().equalsIgnoreCase(script.getInfo().getLabel())) {
                     f.delete();
                     return true;
                 }
@@ -174,18 +162,20 @@ public class QNScriptManager {
             }
         }
         for (QNScript q : scripts) {
-            if (q.getLabel().equalsIgnoreCase(script.getLabel())) {
+            if (q.getInfo().getLabel().equalsIgnoreCase(script.getInfo().getLabel())) {
                 scripts.remove(q);
             }
         }
         return false;
     }
-
+    
     /**
      * 获取所有的脚本代码
      *
      * @return
      */
+    
+    @Deprecated
     public static List<String> getScriptCodes() {
         // to do
         // 返回全部脚本代码
@@ -206,15 +196,44 @@ public class QNScriptManager {
             if (f.isDirectory()) continue;
             try {
                 String code = Utils.readByReader(new FileReader(f));
-                if (!Utils.isNullOrEmpty(code))
+                if (!Utils.isNullOrEmpty(code)) {
                     codes.add(code);
+                }
             } catch (Exception e) {
                 log(e);
             }
         }
         return codes;
     }
-
+    
+    /**
+     * 获取所有的脚本输入流
+     *
+     * @return 所有的脚本输入流
+     */
+    public static List<InputStream> getScriptInputStreams() {
+        // to do
+        // 返回全部脚本代码
+        List<InputStream> codes = new ArrayList<InputStream>() {{
+            add(Utils.toInputStream("demo.java"));
+        }};
+        File dir = new File(scriptsPath);
+        if (!dir.exists()) dir.mkdirs();
+        if (!dir.isDirectory()) {
+            log(new RuntimeException("脚本文件夹不应为一个文件"));
+            return codes;
+        }
+        for (File f : dir.listFiles()) {
+            if (f.isDirectory()) continue;
+            try {
+                codes.add(new FileInputStream(f));
+            } catch (Exception e) {
+                log(e);
+            }
+        }
+        return codes;
+    }
+    
     /**
      * 获取所有的脚本
      *
@@ -223,28 +242,35 @@ public class QNScriptManager {
     public static List<QNScript> getScripts() {
         return scripts;
     }
-
+    
     public static void init() {
         if (init) return;
         scriptsPath = getApplication().getFilesDir().getAbsolutePath() + "/qn_script/";
-        for (String code : getScriptCodes()) {
+        /*for (String code : getScriptCodes()) {
             try {
-                QNScript qs = execute(code);
+                QNScript qs = QNScriptFactory.parse(code);
                 scripts.add(qs);
                 if (qs.isEnable()) {
-                    qs.onLoad();
+                    QNScriptFactory.initScript(qs);
+                }
+            } catch (EvalError e) {
+                log(e);
+            }
+        }*/
+        for (InputStream is : getScriptInputStreams()) {
+            try {
+                QNScript qs = QNScriptFactory.parse(is);
+                scripts.add(qs);
+                if (qs.isEnable()) {
+                    QNScriptFactory.initScript(qs);
                 }
             } catch (EvalError e) {
                 log(e);
             }
         }
+        
+        
         init = true;
-    }
-
-    public static QNScript execute(String code) throws EvalError {
-        Interpreter lp = new Interpreter();
-        lp.setClassLoader(Initiator.class.getClassLoader());
-        return QNScript.create(lp, code);
     }
 
 
@@ -262,8 +288,13 @@ public class QNScriptManager {
         enableall = true;
         for (QNScript qs : QNScriptManager.getScripts())
             if (!qs.isEnable()) {
-                qs.setEnable(true);
-                addEnable();
+                try {
+                    QNScriptFactory.enable(qs);
+                    addEnable();
+                } catch (EvalError evalError) {
+                    Utils.log(evalError);
+                }
+    
             }
 
     }
@@ -272,7 +303,7 @@ public class QNScriptManager {
         enableall = false;
         for (QNScript qs : QNScriptManager.getScripts())
             if (qs.isEnable()) {
-                qs.setEnable(false);
+                QNScriptFactory.disable(qs);
                 delEnable();
             }
 

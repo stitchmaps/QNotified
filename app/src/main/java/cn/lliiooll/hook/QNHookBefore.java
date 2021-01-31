@@ -16,29 +16,10 @@
  * along with this software.  If not, see
  * <https://www.gnu.org/licenses/>.
  */
-package nil.nadph.qnotified.script.params;
+package cn.lliiooll.hook;
 
-public class GroupJoinedParam {
-    /**
-     * 群id
-     */
-    public long uin;
-    /**
-     * 群员id
-     */
-    public long senderuin;
+import de.robv.android.xposed.XC_MethodHook;
 
-    public GroupJoinedParam setUin(long uin) {
-        this.uin = uin;
-        return this;
-    }
-
-    public GroupJoinedParam setSenderUin(long uin) {
-        this.senderuin = uin;
-        return this;
-    }
-
-    public GroupJoinedParam create() {
-        return this;
-    }
+public interface QNHookBefore extends QNHook {
+    void beforeHookedMethod(XC_MethodHook.MethodHookParam param) throws Throwable;
 }
